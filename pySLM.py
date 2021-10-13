@@ -465,8 +465,9 @@ class MainWindow(TemplateBaseClass,Network):
     
     def create_param_tree(self):  
         self.sliders = {}
+        self.sliders_spinboxes = {}
         self.tree_params = self.ui.tree_params
-        self.tree_params.setColumnCount(2)
+        self.tree_params.setColumnCount(3)
         self.tree_params.keyPressEvent = self.keyPressEvent # allow keys catching for focus on trees
         self.tree_params.setHeaderLabels(['Main',''])
         
@@ -552,10 +553,26 @@ class MainWindow(TemplateBaseClass,Network):
         self.sliders[param].valueChanged.connect(partial(self.update_slider,conv_factor,param))
         tree_widget_item.setWidget(1, self.sliders[param])
         self.tree_params.addTopLevelItem(tree_widget_item)
+        self.sliders_spinboxes[param] = QtGui.QDoubleSpinBox()
+        self.sliders_spinboxes[param].setRange(conv_factor * mi,conv_factor * ma)
+        self.sliders_spinboxes[param].setSingleStep(conv_factor * step)              
+        self.sliders_spinboxes[param].setValue(value)
+        tree_widget_item.setWidget(2, self.sliders_spinboxes[param])
+        self.tree_params.addTopLevelItem(tree_widget_item)
+        self.sliders_spinboxes[param].valueChanged.connect(partial(self.update_slider_from_spinbox,conv_factor,param))
     
     def update_slider(self,conv_factor,param):
-        value = int(self.sliders[param].value())
-        self.update_param(param,value/conv_factor)
+        ivalue = int(self.sliders[param].value())
+        value = ivalue/conv_factor
+        self.sliders_spinboxes[param].setValue(value)
+        self.update_param(param,value)
+        self.update_plots()
+    
+    def update_slider_from_spinbox(self,conv_factor,param):
+        value = self.sliders_spinboxes[param].value()
+        ivalue = int(value/conv_factor)
+        self.sliders[param].setValue(ivalue)
+        self.update_param(param,value)
         self.update_plots()
     
     def update_spinbox(self,param):
