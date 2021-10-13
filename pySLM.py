@@ -466,7 +466,7 @@ class MainWindow(TemplateBaseClass,Network):
     def create_param_tree(self):  
         self.sliders = {}
         self.tree_params = self.ui.tree_params
-        self.tree_params.setColumnCount(3)
+        self.tree_params.setColumnCount(2)
         self.tree_params.keyPressEvent = self.keyPressEvent # allow keys catching for focus on trees
         self.tree_params.setHeaderLabels(['Main',''])
         
