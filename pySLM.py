@@ -291,8 +291,8 @@ class Rectangle():
         self.utilities_params['y0'] = {'min':0,'max':parent.params['window_res_y'],'step':1}
         self.utilities_params['offset']    = {'min':0,'max':255,'step':1}
         self.utilities_params['amplitude'] = {'min':0,'max':255,'step':1}
-        self.utilities_params['size_x'] = {'min':1,'max':int(parent.params['window_res_x']/2),'step':1}
-        self.utilities_params['size_y'] = {'min':1,'max':int(parent.params['window_res_y']/2),'step':1}
+        self.utilities_params['size_x'] = {'min':1,'max':int(parent.params['window_res_x']),'step':1}
+        self.utilities_params['size_y'] = {'min':1,'max':int(parent.params['window_res_y']),'step':1}
         
         self.update_data()
         
@@ -469,7 +469,7 @@ class MainWindow(TemplateBaseClass,Network):
         self.tree_params = self.ui.tree_params
         self.tree_params.setColumnCount(3)
         self.tree_params.keyPressEvent = self.keyPressEvent # allow keys catching for focus on trees
-        self.tree_params.setHeaderLabels(['Main',''])
+        self.tree_params.setHeaderLabels(['Main','',''])
         
         param = 'x0'
         tree_widget_item = pg.TreeWidgetItem([param])
@@ -486,6 +486,7 @@ class MainWindow(TemplateBaseClass,Network):
     
     def create_sub_param_tree(self):
         self.sub_sliders = {}
+        self.sub_sliders_spinboxes = {}
         
         if len(self.dict_units.keys()) > 1:
             # For the 'all' group
@@ -510,39 +511,90 @@ class MainWindow(TemplateBaseClass,Network):
     
     def create_slider_sub_tree_all(self,unit,param,tree_widget_item,parent_param=False):
         self.sub_sliders['all_'+unit+param] = QtGui.QSlider()
-        self.sub_sliders['all_'+unit+param].setRange(self.dict_units[unit].utilities_params[param]['min'],self.dict_units[unit].utilities_params[param]['max'])
-        self.sub_sliders['all_'+unit+param].setSingleStep(self.dict_units[unit].utilities_params[param]['step'])                               # integers only
+        mi = self.dict_units[unit].utilities_params[param]['min']
+        ma = self.dict_units[unit].utilities_params[param]['max']
+        step = self.dict_units[unit].utilities_params[param]['step']
+        self.sub_sliders['all_'+unit+param].setRange(mi,ma)
+        self.sub_sliders['all_'+unit+param].setSingleStep(step)                               # integers only
         self.sub_sliders['all_'+unit+param].setOrientation(QtCore.Qt.Orientation.Horizontal)  # horizontale
         conv_factor = int(1 / self.dict_units[unit].utilities_params[param]['step'])
         value = self.dict_units[unit].params[param] * conv_factor
         self.sub_sliders['all_'+unit+param].setValue(int(value))
         self.sub_sliders['all_'+unit+param].valueChanged.connect(partial(self.update_slider_unit_all,unit,conv_factor,param))
-        tree_widget_item.setWidget(1, self.sub_sliders['all_'+unit+param])
+        self.sub_sliders_spinboxes['all_'+unit+param] = QtGui.QDoubleSpinBox()
+        tree_widget_item.setWidget(2, self.sub_sliders['all_'+unit+param])
         parent_param.addChild(tree_widget_item)
+        self.tree_params.addTopLevelItem(tree_widget_item)
+        self.sub_sliders_spinboxes['all_'+unit+param] = QtGui.QDoubleSpinBox()
+        self.sub_sliders_spinboxes['all_'+unit+param].setRange(conv_factor * mi,conv_factor * ma)
+        self.sub_sliders_spinboxes['all_'+unit+param].setSingleStep(conv_factor * step)              
+        self.sub_sliders_spinboxes['all_'+unit+param].setValue(value)
+        self.sub_sliders_spinboxes['all_'+unit+param].setKeyboardTracking(False) # emit signal only when enter is pressed
+        tree_widget_item.setWidget(1, self.sub_sliders_spinboxes['all_'+unit+param])
+        self.sub_sliders_spinboxes['all_'+unit+param].valueChanged.connect(partial(self.update_all_slider_from_spinbox,unit,conv_factor,param))
+        parent_param.addChild(tree_widget_item)
+    
     
     def update_slider_unit_all(self,unit,conv_factor,param):
         value = int(self.sub_sliders['all_'+unit+param].value())
+        self.sub_sliders_spinboxes['all_'+unit+param].setValue(value)
+        for a_unit in self.dict_units.keys():
+            self.sub_sliders_spinboxes[a_unit+param].setValue(value)
         self.update_param(param,value/conv_factor,'all')
         self.update_plots()
-    
-    def create_slider_sub_tree(self,unit,param,tree_widget_item,parent_param=False):
-        self.sub_sliders[unit+param] = QtGui.QSlider()
-        self.sub_sliders[unit+param].setRange(self.dict_units[unit].utilities_params[param]['min'],self.dict_units[unit].utilities_params[param]['max'])
-        self.sub_sliders[unit+param].setSingleStep(self.dict_units[unit].utilities_params[param]['step'])                               # integers only
-        self.sub_sliders[unit+param].setOrientation(QtCore.Qt.Orientation.Horizontal)  # horizontale
-        conv_factor = int(1 / self.dict_units[unit].utilities_params[param]['step'])
-        value = self.dict_units[unit].params[param] * conv_factor
-        self.sub_sliders[unit+param].setValue(int(value))
-        self.sub_sliders[unit+param].valueChanged.connect(partial(self.update_slider_unit,unit,conv_factor,param))
-        tree_widget_item.setWidget(1, self.sub_sliders[unit+param])
-        parent_param.addChild(tree_widget_item)
-    
-    def update_slider_unit(self,unit,conv_factor,param):
-        value = int(self.sub_sliders[unit+param].value())
+        
+    def update_all_slider_from_spinbox(self,unit,conv_factor,param):
+        #print(f"updating all slider from spinbox[{unit+param}]")
+        value = self.sub_sliders_spinboxes['all_'+unit+param].value()
+        ivalue = int(value/conv_factor)
+        self.sub_sliders['all_'+unit+param].setValue(ivalue)
+        for a_unit in self.dict_units.keys():
+            self.update_sub_slider_from_spinbox(a_unit,conv_factor,param)
         unit_number = self.text_num_split(unit)[-1]
         self.update_param(param,value/conv_factor,unit_number)
         self.update_plots()
+        
+    def create_slider_sub_tree(self,unit,param,tree_widget_item,parent_param=False):
+        self.sub_sliders[unit+param] = QtGui.QSlider()
+        mi = self.dict_units[unit].utilities_params[param]['min']
+        ma = self.dict_units[unit].utilities_params[param]['max']
+        step = self.dict_units[unit].utilities_params[param]['step']
+        self.sub_sliders[unit+param].setRange(mi,ma)
+        self.sub_sliders[unit+param].setSingleStep(step)                               # integers only
+        self.sub_sliders[unit+param].setOrientation(QtCore.Qt.Orientation.Horizontal)  # horizontale
+        conv_factor = int(1 / step)
+        value = self.dict_units[unit].params[param] * conv_factor
+        self.sub_sliders[unit+param].setValue(int(value))
+        self.sub_sliders[unit+param].valueChanged.connect(partial(self.update_slider_unit,unit,conv_factor,param))
+        tree_widget_item.setWidget(2, self.sub_sliders[unit+param])
+        self.sub_sliders_spinboxes[unit+param] = QtGui.QDoubleSpinBox()
+        self.sub_sliders_spinboxes[unit+param].setRange(conv_factor * mi,conv_factor * ma)
+        self.sub_sliders_spinboxes[unit+param].setSingleStep(conv_factor * step)              
+        self.sub_sliders_spinboxes[unit+param].setValue(value)
+        self.sub_sliders_spinboxes[unit+param].setKeyboardTracking(False) # emit signal only when enter is pressed
+        tree_widget_item.setWidget(1, self.sub_sliders_spinboxes[unit+param])
+        self.sub_sliders_spinboxes[unit+param].valueChanged.connect(partial(self.update_sub_slider_from_spinbox,unit,conv_factor,param))
+        parent_param.addChild(tree_widget_item)
     
+    def update_slider_unit(self,unit,conv_factor,param):
+        ivalue = int(self.sub_sliders[unit+param].value())
+        self.sub_sliders_spinboxes[unit+param].setValue(ivalue)
+        unit_number = self.text_num_split(unit)[-1]
+        self.update_param(param,ivalue/conv_factor,unit_number)
+        self.update_plots()
+        
+    def update_sub_slider_from_spinbox(self,unit,conv_factor,param):
+        #print(f"updating sub slider from spinbox[{unit+param}]")
+        value = self.sub_sliders_spinboxes[unit+param].value()
+        ivalue = int(value/conv_factor)
+        self.sub_sliders[unit+param].setValue(ivalue)
+        unit_number = self.text_num_split(unit)[-1]
+        #print(unit, param, value, self.dict_units[unit].params[param])
+        if(value != self.dict_units[unit].params[param]):
+            #print(f"update {value} {self.dict_units[unit].params[param]}")
+            self.update_plots()
+        self.update_param(param,value/conv_factor,unit_number)
+
     def create_slider_tree(self,param,mi,ma,step,tree_widget_item,conv_factor=1):
         self.sliders[param] = QtGui.QSlider()
         self.sliders[param].setRange(mi,ma)
@@ -551,13 +603,14 @@ class MainWindow(TemplateBaseClass,Network):
         value = self.params[param] * conv_factor
         self.sliders[param].setValue(int(value))
         self.sliders[param].valueChanged.connect(partial(self.update_slider,conv_factor,param))
-        tree_widget_item.setWidget(1, self.sliders[param])
-        self.tree_params.addTopLevelItem(tree_widget_item)
+        tree_widget_item.setWidget(2, self.sliders[param])
+        #self.tree_params.addTopLevelItem(tree_widget_item)
         self.sliders_spinboxes[param] = QtGui.QDoubleSpinBox()
         self.sliders_spinboxes[param].setRange(conv_factor * mi,conv_factor * ma)
         self.sliders_spinboxes[param].setSingleStep(conv_factor * step)              
         self.sliders_spinboxes[param].setValue(value)
-        tree_widget_item.setWidget(2, self.sliders_spinboxes[param])
+        self.sliders_spinboxes[param].setKeyboardTracking(False) # emit signal only when enter is pressed
+        tree_widget_item.setWidget(1, self.sliders_spinboxes[param])
         self.tree_params.addTopLevelItem(tree_widget_item)
         self.sliders_spinboxes[param].valueChanged.connect(partial(self.update_slider_from_spinbox,conv_factor,param))
     
@@ -567,7 +620,7 @@ class MainWindow(TemplateBaseClass,Network):
         self.sliders_spinboxes[param].setValue(value)
         self.update_param(param,value)
         self.update_plots()
-    
+        
     def update_slider_from_spinbox(self,conv_factor,param):
         value = self.sliders_spinboxes[param].value()
         ivalue = int(value/conv_factor)
