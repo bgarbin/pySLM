@@ -7,6 +7,8 @@ from pyqtgraph.dockarea import *
 from pyqtgraph.ptime import time as pgtime
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
+import io_utilities
+
 import matplotlib.pyplot as plt
 import sys,os
 import numpy as np
@@ -453,12 +455,22 @@ class MainWindow(TemplateBaseClass,Network):
         self.create_sub_param_tree()
         ### END Params Tree
         
-        
         ##############################  END Trees declaration  ############################
-
+        
+        # Load an existing configration
+        if len(sys.argv) > 1:
+            option_name = sys.argv[1]
+            if option_name != '--pylab':
+                assert option_name == '-f', f"option '{option_name}' not understood. Known option is only '-f' with filename as value"
+                assert len(sys.argv) == 3, "Your command should look like: python pySLM.py -f params.txt"
+                input_file = sys.argv[2]
+                print('Loading config file...')
+                self = io_utilities.load_config(self,input_file)
+                print('Done')
+                
         # Update all plots
         self.update_plots()
-        
+                
         # Start showing the window
         self.show()
     
@@ -625,7 +637,6 @@ class MainWindow(TemplateBaseClass,Network):
         self.update_plots()
         
     def update_slider_from_spinbox(self,conv_factor,param):
-        print('ok')
         value = self.sliders_spinboxes[param].value()
         ivalue = int(value/conv_factor)
         self.sliders[param].setValue(ivalue)
@@ -730,7 +741,7 @@ class MainWindow(TemplateBaseClass,Network):
     def update_unit_texts(self,dock_name):
         for unit in self.dict_units.keys():
             unit_number = self.text_num_split(unit)[-1]
-            self.dict_unit_texts[f'{dock_name}_{unit_number}'].setPos(self.dict_units[unit].params['x0'], self.dict_units[unit].params['y0'])    
+            self.dict_unit_texts[f'{dock_name}_{unit_number}'].setPos(self.dict_units[unit].params['x0'], self.dict_units[unit].params['y0'])
     
     def create_ImageView_blackwhite(self,dock_name):
         # Item for displaying image data
@@ -768,6 +779,14 @@ class MainWindow(TemplateBaseClass,Network):
         
         if key == 'q':
             sys.exit()
+        elif key == 'l':
+            print('Loading config file...')
+            io_utilities.load_config(self)
+            print('Done')
+        elif key == 's':
+            print('Saving config file...')
+            io_utilities.save_config(self)
+            print('Done')
         elif key == 'f':
             self.flag_title_bar = not(self.flag_title_bar)
             if self.flag_title_bar: self.docks['black_white']['dock'].showTitleBar()
