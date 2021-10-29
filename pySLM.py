@@ -553,8 +553,8 @@ class MainWindow(TemplateBaseClass,Network):
             self.update_sub_slider_from_spinbox(a_unit,conv_factor,param)
         unit_number = self.text_num_split(unit)[-1]
         if(value != self.dict_units[unit].params[param]):
-           self.update_param(param,value,'all')
-           self.update_plots()
+            self.update_param(param,value,'all')
+            self.update_plots()
         
     def create_slider_sub_tree(self,unit,param,tree_widget_item,parent_param=False):
         self.sub_sliders[unit+param] = QtGui.QSlider()
@@ -584,8 +584,8 @@ class MainWindow(TemplateBaseClass,Network):
         self.sub_sliders_spinboxes[unit+param].setValue(ivalue)
         unit_number = self.text_num_split(unit)[-1]
         if(value != self.dict_units[unit].params[param]):
-           self.update_param(param,value,unit_number)
-           self.update_plots()
+            self.update_param(param,value,unit_number)
+            self.update_plots()
         
     def update_sub_slider_from_spinbox(self,unit,conv_factor,param):
         value = self.sub_sliders_spinboxes[unit+param].value()
@@ -625,11 +625,25 @@ class MainWindow(TemplateBaseClass,Network):
         self.update_plots()
         
     def update_slider_from_spinbox(self,conv_factor,param):
+        print('ok')
         value = self.sliders_spinboxes[param].value()
         ivalue = int(value/conv_factor)
         self.sliders[param].setValue(ivalue)
         self.update_param(param,value)
         self.update_plots()
+    
+    def create_spinbox(self,param,mi,ma,step,tree_widget_item):
+        
+        ''' Create spinboxes of the "Main" params '''
+        
+        self.spinboxes[param] = QtGui.QSpinBox()
+        self.spinboxes[param].setRange(mi,ma)
+        self.spinboxes[param].setSingleStep(step)
+        self.spinboxes[param].setValue(self.params[param])
+        self.spinboxes[param].setKeyboardTracking(False) # emit signal only when enter is pressed
+        self.spinboxes[param].valueChanged.connect(partial(self.update_spinbox,param))
+        tree_widget_item.setWidget(1, self.spinboxes[param])
+        self.tree.addTopLevelItem(tree_widget_item)
     
     def update_spinbox(self,param):
         value = int(self.spinboxes[param].value())
@@ -641,16 +655,6 @@ class MainWindow(TemplateBaseClass,Network):
         self.tree_params.reset()
         self.create_param_tree()
         self.create_sub_param_tree()
-    
-    def create_spinbox(self,param,mi,ma,step,tree_widget_item):
-        self.spinboxes[param] = QtGui.QSpinBox()
-        self.spinboxes[param].setRange(mi,ma)
-        self.spinboxes[param].setSingleStep(step)
-        self.spinboxes[param].setValue(self.params[param])
-        self.spinboxes[param].setKeyboardTracking(False) # emit signal only when enter is pressed
-        self.spinboxes[param].valueChanged.connect(partial(self.update_spinbox,param))
-        tree_widget_item.setWidget(1, self.spinboxes[param])
-        self.tree.addTopLevelItem(tree_widget_item)
     
     def update_plots(self):
         for dock_name in self.docks.keys():
@@ -715,17 +719,18 @@ class MainWindow(TemplateBaseClass,Network):
     
     def write_unit_number(self,dock_name):
         self.dict_unit_texts = {}
-        for unit_index in range(len(self.list_centers[0])):
-            self.dict_unit_texts[f'{dock_name}_{unit_index}'] = pg.TextItem(html=f'<span style="color: #B3B3B3">{unit_index+1}</span>', anchor=(0.5,0.5), angle=0, border='#B3B3B3', fill=(0, 0, 255, 0))
-            self.docks[dock_name]['actual_plot'].addItem(self.dict_unit_texts[f'{dock_name}_{unit_index}'])
-            self.dict_unit_texts[f'{dock_name}_{unit_index}'].setPos(self.list_centers[0][unit_index], self.list_centers[1][unit_index])
+        for unit in self.dict_units.keys():
+            unit_number = self.text_num_split(unit)[-1]
+            self.dict_unit_texts[f'{dock_name}_{unit_number}'] = pg.TextItem(html=f'<span style="color: #B3B3B3">{unit_number}</span>', anchor=(0.5,0.5), angle=0, border='#B3B3B3', fill=(0, 0, 255, 0))
+            self.docks[dock_name]['actual_plot'].addItem(self.dict_unit_texts[f'{dock_name}_{unit_number}'])
+            self.dict_unit_texts[f'{dock_name}_{unit_number}'].setPos(self.dict_units[unit].params['x0'], self.dict_units[unit].params['y0'])
     def erase_unit_numbers(self,dock_name):
         for key in self.dict_unit_texts.keys():
             self.docks[dock_name]['actual_plot'].removeItem(self.dict_unit_texts[key])
     def update_unit_texts(self,dock_name):
-        for unit_index in range(len(self.list_centers[0])):
-            self.dict_unit_texts[f'{dock_name}_{unit_index}'].setPos(self.list_centers[0][unit_index], self.list_centers[1][unit_index])
-    
+        for unit in self.dict_units.keys():
+            unit_number = self.text_num_split(unit)[-1]
+            self.dict_unit_texts[f'{dock_name}_{unit_number}'].setPos(self.dict_units[unit].params['x0'], self.dict_units[unit].params['y0'])    
     
     def create_ImageView_blackwhite(self,dock_name):
         # Item for displaying image data
