@@ -37,7 +37,7 @@ class Network():
         
         # Create dict of unit_types
         self.unit_types = {}
-        for unit_type in ['gaussian','circle','ellipse','rectangle']:
+        for unit_type in ['gaussian','circle','ellipse','rectangle','phi']:
             self.unit_types[unit_type] = {}
             
         # Get list of all the centers according to shape and nb_x, nb_y
@@ -119,6 +119,8 @@ class Network():
                 self.dict_units[f'ellipse{flag}'] = Ellipse(x,y,x0=self.list_centers[0][unit_index],y0=self.list_centers[1][unit_index],parent=self)
             elif self.params['unit_type'] == 'rectangle':
                 self.dict_units[f'rectangle{flag}'] = Rectangle(x,y,x0=self.list_centers[0][unit_index],y0=self.list_centers[1][unit_index],parent=self)
+            elif self.params['unit_type'] == 'phi':
+                self.dict_units[f'phi{flag}'] = Phi(x,y,x0=self.list_centers[0][unit_index],y0=self.list_centers[1][unit_index],parent=self)
             else:
                 raise(AttributeError(f"Unit type {self.params['unit_type']} not found"))
             
@@ -276,7 +278,7 @@ class Circle():
         
 class Rectangle():
     
-    def __init__(self,x,y, x0=0., y0=0., offset=0, amplitude=140, size_x=100,size_y=None,parent=None):
+    def __init__(self,x,y, x0=0., y0=0., offset=0, amplitude=140, size_x=100,theta=0,size_y=None,parent=None):
         
         if not size_y: 
             size_y = size_x        # for locals()
@@ -296,6 +298,7 @@ class Rectangle():
         self.utilities_params['amplitude'] = {'min':0,'max':255,'step':1}
         self.utilities_params['size_x'] = {'min':1,'max':int(parent.params['window_res_x']),'step':1}
         self.utilities_params['size_y'] = {'min':1,'max':int(parent.params['window_res_y']),'step':1}
+        self.utilities_params['theta']     = {'min':-180,'max':180,'step':1}
         
         self.update_data()
         
@@ -304,8 +307,62 @@ class Rectangle():
         ''' Update the 2D circle data '''
         
         self.data = np.zeros((len(self.x), len(self.x[0])))
+        theta = self.params['theta'] * np.pi/180  # theta in degree
         
-        self.data[int(self.params['y0']-self.params['size_y']/2.):int(self.params['y0']+self.params['size_y']/2.),int(self.params['x0']-self.params['size_x']/2.):int(self.params['x0']+self.params['size_x']/2.)] = 1
+        X = ne.evaluate("(x-x0)*cos(theta) - (y-y0)*sin(theta)", local_dict=dict(self.params,**{'theta':theta,'x':self.x,'y':self.y}))
+        Y = ne.evaluate("(x-x0)*sin(theta) + (y-y0)*cos(theta)", local_dict=dict(self.params,**{'theta':theta,'x':self.x,'y':self.y}))
+                
+        self.data = (Y + (self.params['size_y']/2.) >=0) & (Y - (self.params['size_y']/2.) <=0) & (X + (self.params['size_x']/2.) >=0) & (X - (self.params['size_x']/2.) <=0)
+
+        self.data = self.data * self.params['amplitude'] + self.params['offset']
+        
+class Phi():
+    
+    def __init__(self,x,y, x0=0., y0=0., offset=0, amplitude=140, radius=170,arm_y=50,arm_in=140,arm_out=140,theta=0,hole=70,parent=None):
+        
+        
+        self.params = {}
+        self.params.update({key:val for (key,val) in locals().items() if key!='self' and key!='x' and key!='y' and key!='parent'})
+        
+        self.x = x
+        self.y = y
+        
+        self.utilities_params = {}
+        self.utilities_params['x0'] = {'min':0,'max':parent.params['window_res_x'],'step':1}
+        self.utilities_params['y0'] = {'min':0,'max':parent.params['window_res_y'],'step':1}
+        self.utilities_params['offset']    = {'min':0,'max':255,'step':1}
+        self.utilities_params['amplitude'] = {'min':0,'max':255,'step':1}
+        self.utilities_params['radius'] = {'min':1,'max':int(parent.params['window_res_x']/2),'step':1}
+        self.utilities_params['arm_y'] = {'min':1,'max':int(parent.params['window_res_y']),'step':1}
+        self.utilities_params['arm_in'] = {'min':1,'max':int(parent.params['window_res_x']),'step':1}
+        self.utilities_params['arm_out'] = {'min':1,'max':int(parent.params['window_res_x']),'step':1}
+        self.utilities_params['hole'] ={'min':1,'max':100,'step':1}
+        self.utilities_params['theta']     = {'min':-180,'max':180,'step':1}
+        
+        self.update_data()
+        
+    def update_data(self):
+        
+        ''' Update the 2D circle data '''
+        
+        self.data = np.zeros((len(self.x), len(self.x[0])))
+
+
+        data1=np.zeros((len(self.x), len(self.x[0])))
+        data1=((self.x - self.params['x0'])**2 + (self.y - self.params['y0'])**2 <= self.params['radius']**2) & ((self.x - self.params['x0'])**2 + (self.y - self.params['y0'])**2 >= ((self.params['hole']*self.params['radius'])/100)**2 ) # circle with a hole
+        data1.astype(int)
+
+        theta = self.params['theta'] * np.pi/180  # theta in degree     
+        X = ne.evaluate("(x-x0)*cos(theta) - (y-y0)*sin(theta)", local_dict=dict(self.params,**{'theta':theta,'x':self.x,'y':self.y}))
+        Y = ne.evaluate("(x-x0)*sin(theta) + (y-y0)*cos(theta)", local_dict=dict(self.params,**{'theta':theta,'x':self.x,'y':self.y}))
+        
+        data2=np.zeros((len(self.x), len(self.x[0])))     
+        data2= (Y + (self.params['arm_y']/2.) >=0) & (Y - (self.params['arm_y']/2.) <=0) & (X + self.params['radius'] + self.params['arm_in'] >=0) & (X + self.params['radius'] <=0) # input arm
+        
+        data3=np.zeros((len(self.x), len(self.x[0])))     
+        data3= (Y + (self.params['arm_y']/2.) >=0) & (Y - (self.params['arm_y']/2.) <=0) & (X - self.params['radius'] - self.params['arm_out'] <=0) & (X - self.params['radius'] >=0) # output arm
+        
+        self.data =data1+data2+data3
         
         self.data = self.data * self.params['amplitude'] + self.params['offset']
         
