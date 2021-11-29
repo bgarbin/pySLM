@@ -14,6 +14,8 @@ import sys,os
 import numpy as np
 import numexpr as ne
 from functools import partial
+import cmath 
+import math
 
 pg.mkQApp()
 pg.setConfigOption('background', (30, 30, 30))
@@ -30,7 +32,7 @@ class Patterns():
     pass
 
 class Network():
-    def __init__(self,window_res_x=1920,window_res_y=1080, unit_type='gaussian',shape='square',x0=0,y0=0,theta=0,nb_x=2,nb_y=1,scale=1.0):
+    def __init__(self,window_res_x=1920,window_res_y=1080, unit_type='gaussian',shape='square',x0=0,y0=0,theta=0,nb_x=2,nb_y=1,pitch=10,scale=1.0):
         
         self.params = {}
         self.params.update({key:val for (key,val) in locals().items() if key!='self'})
@@ -39,6 +41,12 @@ class Network():
         self.unit_types = {}
         for unit_type in ['gaussian','circle','ellipse','rectangle','phi']:
             self.unit_types[unit_type] = {}
+        
+        #test
+        # Create dict of shapes 
+        self.shapes = {}
+        for shape in ['square','phi']:
+            self.shapes[shape] = {}
             
         # Get list of all the centers according to shape and nb_x, nb_y
         self.create_list_centers()
@@ -132,8 +140,8 @@ class Network():
         
         if self.params['shape'] == 'square':
             self.list_centers = self.get_centers_square()
-        #elif self.params['shape'] == '':
-            #self.list_centers = 
+        elif self.params['shape'] == 'phi':
+            self.list_centers = self.get_centers_phi()
         else:
             raise(AttributeError(f"Shape {self.params['shape']} not found"))
         
@@ -150,6 +158,36 @@ class Network():
                 list_centers_square[1].append( indy * self.params['window_res_y']/(self.params['nb_y']+1) )  # y0
             
         return np.array(list_centers_square)
+    
+    def get_centers_phi(self):
+        
+        ''' Returns a 2D list of all the centers for phi shape '''
+        x0= self.params['window_res_x']/2
+        y0= self.params['window_res_y']/2
+        II = cmath.sqrt(-1)
+
+        list_centers_phi = [[],[]]
+
+        pitch =(self.params['pitch'])*20
+        nb=self.params['nb_x']-4-(self.params['nb_x']%2)
+        h =pitch/math.sqrt(2*(1 - math.cos(2*math.pi/nb))) # radius of the circle of the phi
+        for i in range(1,nb+1): 
+            x = cmath.exp(II*(i)*2*(math.pi)/nb) #2pi/nb = angle at each center is placed on the circle
+            list_centers_phi[0].append( x0+h*x.real )  # x0
+            list_centers_phi[1].append( y0+h*x.imag )  # y0
+        list_centers_phi[0].append(x0+h+(1*pitch) )  # x0 output arm
+        list_centers_phi[1].append( y0)  # y0 output arm
+        list_centers_phi[0].append(x0+h+(2*pitch) )  # x0 output arm
+        list_centers_phi[1].append( y0)  # y0 output arm
+        list_centers_phi[0].append(x0-h-(1*pitch) )  # x0 input arm
+        list_centers_phi[1].append( y0)  # y0 input arm
+        list_centers_phi[0].append(x0-h-(2*pitch) )  # x0 input arm
+        list_centers_phi[1].append( y0)  # y0 input arm
+        if self.params['nb_x']%2 ==1: # put another center on the oytput arm if nb is odd
+                list_centers_phi[0].append(x0+h+(3*pitch) )  # x0 output arm
+                list_centers_phi[1].append( y0)  # y0 output arm
+
+        return np.array(list_centers_phi)
         
     def modify_list_centers(self):
         
@@ -475,10 +513,31 @@ class MainWindow(TemplateBaseClass,Network):
 
         param = 'nb_x'
         tree_widget_item = pg.TreeWidgetItem([param])
-        self.create_spinbox(param,0,10,1,tree_widget_item)
+        self.create_spinbox(param,0,20,1,tree_widget_item)
+        
         param = 'nb_y'
         tree_widget_item = pg.TreeWidgetItem([param])
         self.create_spinbox(param,0,10,1,tree_widget_item)
+        
+        param = 'pitch'
+        tree_widget_item = pg.TreeWidgetItem([param])
+        self.create_spinbox(param,0,20,1,tree_widget_item) 
+
+        
+        #test
+        self.group_buttons_main = QtGui.QButtonGroup()
+        self.group_buttons_main.setExclusive(True)
+        for shape in self.shapes.keys():
+            self.shapes[shape]['checkbox'] = QtGui.QCheckBox()
+            self.group_buttons_main.addButton(self.shapes[shape]['checkbox'], 1)
+            temp = pg.TreeWidgetItem([shape])
+            temp.setWidget(1, self.shapes[shape]['checkbox'])
+            self.tree.addTopLevelItem(temp)
+            if shape == self.params['shape']:
+                self.shapes[shape]['checkbox'].setChecked(True) # set initial state
+            self.shapes[shape]['checkbox'].keyPressEvent = self.keyPressEvent
+
+        self.group_buttons_main.buttonClicked.connect(self.update_checkbox_main)
         ### END Main Tree
         
         
@@ -745,6 +804,17 @@ class MainWindow(TemplateBaseClass,Network):
         self.tree_params.reset()
         self.create_param_tree()
         self.create_sub_param_tree()
+
+
+    def update_checkbox_main(self):
+        for shape in self.shapes.keys():
+            if self.shapes[shape]['checkbox'].isChecked():                
+                self.update_param('shape',shape,reset=True)
+        self.update_plots()
+        self.tree_params.clear()
+        self.tree_params.reset()
+        self.create_param_tree()
+        self.create_sub_param_tree()
     
     def update_images_colormap(self):
         self.flag_colormaps += 1
@@ -799,7 +869,7 @@ class MainWindow(TemplateBaseClass,Network):
         for unit in self.dict_units.keys():
             unit_number = self.text_num_split(unit)[-1]
             self.dict_unit_texts[f'{dock_name}_{unit_number}'].setPos(self.dict_units[unit].params['x0'], self.dict_units[unit].params['y0'])
-    
+            
     def create_ImageView_blackwhite(self,dock_name):
         # Item for displaying image data
         pl = pg.PlotItem()  # to get axis
