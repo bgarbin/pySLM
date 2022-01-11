@@ -356,7 +356,7 @@ class Rectangle():
         
 class Phi():
     
-    def __init__(self,x,y, x0=0., y0=0., offset=0, amplitude=140, radius=170,arm_y=50,arm_in=140,arm_out=140,theta=0,hole=70,parent=None):
+    def __init__(self,x,y, x0=0., y0=0., offset=0, amplitude=140, radius=170,arm_y=35,arm_in=100,arm_out=100,theta=0,hole=70,parent=None):
         
         
         self.params = {}
@@ -371,7 +371,8 @@ class Phi():
         self.utilities_params['offset']    = {'min':0,'max':255,'step':1}
         self.utilities_params['amplitude'] = {'min':0,'max':255,'step':1}
         self.utilities_params['radius'] = {'min':1,'max':int(parent.params['window_res_x']/2),'step':1}
-        self.utilities_params['arm_y'] = {'min':1,'max':int(parent.params['window_res_y']),'step':1}
+        # self.utilities_params['arm_y'] = {'min':1,'max':int(parent.params['window_res_y']),'step':1}
+        self.utilities_params['arm_y'] = {'min':1,'max':200,'step':1}
         self.utilities_params['arm_in'] = {'min':1,'max':int(parent.params['window_res_x']),'step':1}
         self.utilities_params['arm_out'] = {'min':1,'max':int(parent.params['window_res_x']),'step':1}
         self.utilities_params['hole'] ={'min':1,'max':100,'step':1}
@@ -395,10 +396,11 @@ class Phi():
         Y = ne.evaluate("(x-x0)*sin(theta) + (y-y0)*cos(theta)", local_dict=dict(self.params,**{'theta':theta,'x':self.x,'y':self.y}))
         
         data2=np.zeros((len(self.x), len(self.x[0])))     
-        data2= (Y + (self.params['arm_y']/2.) >=0) & (Y - (self.params['arm_y']/2.) <=0) & (X + self.params['radius'] + self.params['arm_in'] >=0) & (X + self.params['radius'] <=0) # input arm
+        # data2= (Y + (self.params['arm_y']/2.) >=0) & (Y - (self.params['arm_y']/2.) <=0) & (X + self.params['radius'] + self.params['arm_in'] >=0) & (X + self.params['radius'] <=0) # input arm
+        data2= (Y + (((self.params['arm_y']*self.params['radius'])/100)/2.) >=0) & ((Y - ((self.params['arm_y']*self.params['radius'])/100)/2.) <=0) & (X + self.params['radius'] + ((self.params['arm_in']*self.params['radius'])/100) >=0) & (X + self.params['radius'] <=0) # input arm
         
         data3=np.zeros((len(self.x), len(self.x[0])))     
-        data3= (Y + (self.params['arm_y']/2.) >=0) & (Y - (self.params['arm_y']/2.) <=0) & (X - self.params['radius'] - self.params['arm_out'] <=0) & (X - self.params['radius'] >=0) # output arm
+        data3= (Y + (((self.params['arm_y']*self.params['radius'])/100)/2.) >=0) & ((Y - ((self.params['arm_y']*self.params['radius'])/100)/2.) <=0) & (X - self.params['radius'] - ((self.params['arm_out']*self.params['radius'])/100) <=0) & (X - self.params['radius'] >=0) # output arm
         
         self.data =data1+data2+data3
         
