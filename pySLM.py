@@ -230,7 +230,7 @@ class Gaussian():
         self.utilities_params['x0'] = {'min':0,'max':parent.params['window_res_x'],'step':1}
         self.utilities_params['y0'] = {'min':0,'max':parent.params['window_res_y'],'step':1}
         self.utilities_params['offset']    = {'min':0,'max':255,'step':1}
-        self.utilities_params['amplitude'] = {'min':0,'max':255,'step':1}
+        self.utilities_params['amplitude'] = {'min':-255,'max':255,'step':1}
         self.utilities_params['theta'] = {'min':-180,'max':180,'step':1}
         self.utilities_params['sigma_x']   = {'min':1,'max':int(parent.params['window_res_x']/2),'step':1}
         self.utilities_params['sigma_y']   = {'min':1,'max':int(parent.params['window_res_y']/2),'step':1}
@@ -264,7 +264,7 @@ class Ellipse():
         self.utilities_params['x0'] = {'min':0,'max':parent.params['window_res_x'],'step':1}
         self.utilities_params['y0'] = {'min':0,'max':parent.params['window_res_y'],'step':1}
         self.utilities_params['offset']    = {'min':0,'max':255,'step':1}
-        self.utilities_params['amplitude'] = {'min':0,'max':255,'step':1}
+        self.utilities_params['amplitude'] = {'min':-255,'max':255,'step':1}
         self.utilities_params['theta']     = {'min':-180,'max':180,'step':1}
         self.utilities_params['radius_x']  = {'min':1,'max':int(parent.params['window_res_x']/2),'step':1}
         self.utilities_params['radius_y']  = {'min':1,'max':int(parent.params['window_res_y']/2),'step':1}
@@ -300,7 +300,7 @@ class Circle():
         self.utilities_params['x0'] = {'min':0,'max':parent.params['window_res_x'],'step':1}
         self.utilities_params['y0'] = {'min':0,'max':parent.params['window_res_y'],'step':1}
         self.utilities_params['offset']    = {'min':0,'max':255,'step':1}
-        self.utilities_params['amplitude'] = {'min':0,'max':255,'step':1}
+        self.utilities_params['amplitude'] = {'min':-255,'max':255,'step':1}
         self.utilities_params['radius'] = {'min':1,'max':int(parent.params['window_res_x']/2),'step':1}
         
         self.update_data()
@@ -333,7 +333,7 @@ class Rectangle():
         self.utilities_params['x0'] = {'min':0,'max':parent.params['window_res_x'],'step':1}
         self.utilities_params['y0'] = {'min':0,'max':parent.params['window_res_y'],'step':1}
         self.utilities_params['offset']    = {'min':0,'max':255,'step':1}
-        self.utilities_params['amplitude'] = {'min':0,'max':255,'step':1}
+        self.utilities_params['amplitude'] = {'min':-255,'max':255,'step':1}
         self.utilities_params['size_x'] = {'min':1,'max':int(parent.params['window_res_x']),'step':1}
         self.utilities_params['size_y'] = {'min':1,'max':int(parent.params['window_res_y']),'step':1}
         self.utilities_params['theta']     = {'min':-180,'max':180,'step':1}
@@ -369,7 +369,7 @@ class Phi():
         self.utilities_params['x0'] = {'min':0,'max':parent.params['window_res_x'],'step':1}
         self.utilities_params['y0'] = {'min':0,'max':parent.params['window_res_y'],'step':1}
         self.utilities_params['offset']    = {'min':0,'max':255,'step':1}
-        self.utilities_params['amplitude'] = {'min':0,'max':255,'step':1}
+        self.utilities_params['amplitude'] = {'min':-255,'max':255,'step':1}
         self.utilities_params['radius'] = {'min':1,'max':int(parent.params['window_res_x']/2),'step':1}
         # self.utilities_params['arm_y'] = {'min':1,'max':int(parent.params['window_res_y']),'step':1}
         self.utilities_params['arm_y'] = {'min':1,'max':200,'step':1}
